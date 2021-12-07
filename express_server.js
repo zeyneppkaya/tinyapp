@@ -11,6 +11,16 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+function generateRandomString(num) {
+  let randomStr = '';
+  let letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < num; i++ ) {
+    randomStr += letters.charAt(Math.floor(Math.random() * 
+    letters.length));
+ }
+ return randomStr;
+};
+
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
