@@ -63,3 +63,9 @@ app.post("/urls", (req, res) => {
   console.log(urlDatabase);
   res.redirect(`/urls/${shortURL}`);
 });
+
+app.post("/urls/:shortURL/delete", (req, res) => {
+  delete urlDatabase[req.params.shortURL];
+  console.log(`deleted the short URL: ${req.params.shortURL} from database`)
+  res.redirect(`/urls`);
+});
