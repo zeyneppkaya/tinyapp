@@ -1,7 +1,9 @@
 const express = require("express");
+const cookieParser = require('cookie-parser');
 const app = express();
 const PORT = 3000;
 app.set("view engine", "ejs");
+
 
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
@@ -73,4 +75,9 @@ app.post("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL
   urlDatabase[req.params.shortURL] = req.body.newURL;
   res.redirect(`/urls/${shortURL}`);
+});
+
+app.post("/login", (req,res) => {
+  res.cookie('username', req.body.username);
+  res.redirect("/urls");
 });
