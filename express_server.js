@@ -36,6 +36,15 @@ function generateRandomString(num) {
  return randomStr;
 };
 
+const checkEmail = (email, userDb) => {
+  for (let user in userDb) {
+      if (users[user].email === email) {
+          return user;
+      } 
+  }
+  return false;
+};
+
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
@@ -99,13 +108,21 @@ app.post("/urls/:shortURL", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  let templateVars = { user: users[req.cookies["user_id"]] };
-  res.render("urls_login", templateVars);
+  const templateVars = { user: users[req.cookies['user_id']], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+  res.render('urls_login', templateVars);
 });
 
-app.post('/login', (req, res) => {
-  res.cookie('username', req.body.username);
-  res.redirect('/urls/');
+app.post("/login", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
+  const user = checkEmail(email, users);
+  console.log(user);
+  if (user && users[user].password === password) {
+    res.cookie('user_id', users[user].id);
+    res.redirect('/urls');
+    return;
+  };
+  res.status(403).send('The server understood the request, but will not fulfill it.');
 });
 
 app.post('/logout', (req, res) => {
