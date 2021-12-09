@@ -98,6 +98,11 @@ app.post("/urls/:shortURL", (req, res) => {
   res.redirect(`/urls/${shortURL}`);
 });
 
+app.get("/login", (req, res) => {
+  let templateVars = { user: users[req.cookies["user_id"]] };
+  res.render("urls_login", templateVars);
+});
+
 app.post('/login', (req, res) => {
   res.cookie('username', req.body.username);
   res.redirect('/urls/');
@@ -132,5 +137,4 @@ app.post("/register", (req,res) => {
   users[userId] = newUser;
   res.cookie('user_id', userId)
   res.redirect("/urls");
-  console.log(users);
 });
