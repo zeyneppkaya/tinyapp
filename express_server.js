@@ -1,7 +1,11 @@
+// REQUIREMENTS
+
 const express = require("express");
+const cookieSession = require('cookie-session');
+const { getUserByEmail, urlsForUser , generateRandomString } = require('./helpers');
 const bodyParser = require("body-parser");
 const bcrypt = require('bcryptjs');
-const cookieSession = require('cookie-session');
+
 const app = express();
 const PORT = 3000;
 app.set("view engine", "ejs");
@@ -9,15 +13,14 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieSession({
   name: 'session',
   keys: ["secretkeys"],
-  maxAge: 24 * 60 * 60 * 1000 
+  maxAge: 24 * 60 * 60 * 1000
 }));
 
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
-});
+
+// DATABASES
 
 const urlDatabase = {
-   b6UTxQ: {
+  b6UTxQ: {
     longURL: "https://lighthouselabs.ca",
     userID: "aJ48lW"
   },
@@ -27,19 +30,25 @@ const urlDatabase = {
   }
 };
 
-const users = { 
+const users = {
   "userRandomID": {
-    id: "userRandomID", 
-    email: "user@example.com", 
+    id: "userRandomID",
+    email: "user@example.com",
     password: bcrypt.hashSync("purple-monkey-dinosaur")
   },
- "user2RandomID": {
-    id: "user2RandomID", 
-    email: "user2@example.com", 
+  "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
     password: bcrypt.hashSync("dishwasher-funk")
   }
-}
+};
 
+
+// ROUTES
+
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}!`);
+});
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -54,7 +63,7 @@ app.get("/hello", (req, res) => {
 });
 
 app.get('/urls', (req, res) => {
-  const urls = urlsForUser(req.session["user_id"]);
+  const urls = urlsForUser(req.session["user_id"], urlDatabase);
   let templateVars = {
     user: users[req.session["user_id"]],
     urls
@@ -74,11 +83,11 @@ app.get("/urls/new", (req, res) => {
 app.get('/urls/:shortURL', (req, res) => {
   const user = users[req.session["user_id"]];
   const url = urlDatabase[req.params.shortURL];
-  if (!user){
+  if (!user) {
     res.redirect("/login", 403);
     return;
   }
-  if (req.session["user_id"] !== url.userID){
+  if (req.session["user_id"] !== url.userID) {
     res.redirect("/urls" , 403);
     return;
   }
@@ -94,8 +103,9 @@ app.get("/u/:shortURL", (req, res) => {
   const url = urlDatabase[req.params.shortURL];
   if (!url) {
     res.status(404).send("Link not found");
+  } else {
+    res.redirect(url.longURL);
   }
-  res.redirect(url.longURL);
 });
 
 app.post("/urls", (req, res) => {
@@ -124,11 +134,11 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.post("/urls/:id", (req, res) => {
   const url = urlDatabase[req.params.id];
   
-  if(url.userID === req.session["user_id"]){
+  if (url.userID === req.session["user_id"]) {
     urlDatabase[req.params.id].longURL = req.body.newURL;
     res.redirect(`/urls/${req.params.id}`);
   } else {
-    res.status(403).send("Not authorized.")
+    res.status(403).send("Not authorized.");
   }
 });
 
@@ -144,15 +154,15 @@ app.get('/login', (req, res) => {
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  const user = getUserByEmail(email);
+  const user = getUserByEmail(email, users);
   if (!user) {
     res.status(403).send('The E-mail or password is missing.');
-  } else if (!bcrypt.compareSync(password, user.password)){
+  } else if (!bcrypt.compareSync(password, user.password)) {
     res.status(403).send('The password is incorrect.');
   } else {
     req.session["user_id"] = user.id;
     res.redirect('/urls');
-  };
+  }
 });
 
 app.post('/logout', (req, res) => {
@@ -169,7 +179,7 @@ app.post('/register', (req, res) => {
     return;
   }
   
-  if (getUserByEmail(email)) {
+  if (getUserByEmail(email , users)) {
     res.status(400).send('This email has already been registered.');
     return;
   }
@@ -179,7 +189,7 @@ app.post('/register', (req, res) => {
     email,
     password,
   };
-  users[userId] = newUser
+  users[userId] = newUser;
   req.session['user_id'] = userId;
   res.redirect("/urls");
 });
@@ -193,31 +203,3 @@ app.get("/register", (req,res) => {
   }
 });
 
-function generateRandomString(num) {
-  let randomStr = '';
-  let letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < num; i++ ) {
-    randomStr += letters.charAt(Math.floor(Math.random() * 
-    letters.length));
-  }
-  return randomStr;
-};
-
-const getUserByEmail = (email) => {
-  for (let user in users) {
-    if (users[user].email === email) {
-      return users[user];
-    } 
-  }
-  return false;
-};
-
-const urlsForUser = (id) => {
-  let user = {};
-  for (let url in urlDatabase) {
-    if (urlDatabase[url].userID === id) {
-      user[url] = urlDatabase[url];
-    }
-  }
-  return user;
-};
