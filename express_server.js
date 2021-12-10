@@ -1,12 +1,17 @@
 const express = require("express");
 const cookieParser = require('cookie-parser');
 const bodyParser = require("body-parser");
+const bcrypt = require('bcryptjs');
 const app = express();
 const PORT = 3000;
 app.set("view engine", "ejs");
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
+
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}!`);
+});
 
 const urlDatabase = {
    b6UTxQ: {
@@ -23,59 +28,26 @@ const users = {
   "userRandomID": {
     id: "userRandomID", 
     email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
+    password: bcrypt.hashSync("purple-monkey-dinosaur")
   },
  "user2RandomID": {
     id: "user2RandomID", 
     email: "user2@example.com", 
-    password: "dishwasher-funk"
+    password: bcrypt.hashSync("dishwasher-funk")
   }
 }
-
-function generateRandomString(num) {
-  let randomStr = '';
-  let letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < num; i++ ) {
-    randomStr += letters.charAt(Math.floor(Math.random() * 
-    letters.length));
- }
- return randomStr;
-};
-
-const checkEmail = (email) => {
-  for (let user in users) {
-      if (users[user].email === email) {
-          return users[user];
-      } 
-  }
-  return false;
-};
-
-const urlsForUser = (id) => {
-  let user = {};
-  for (let url in urlDatabase) {
-    if (urlDatabase[url].userID === id) {
-      user[url] = urlDatabase[url];
-    }
-  }
-  return user;
-};
 
 
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
-});
-
 app.get("/urls.json", (req, res) => {
-    res.json(urlDatabase);
+  res.json(urlDatabase);
 });
 
 app.get("/hello", (req, res) => {
-    res.send("<html><body>Hello <b>World</b></body></html>");
+  res.send("<html><body>Hello <b>World</b></body></html>");
 });
 
 app.get('/urls', (req, res) => {
@@ -148,7 +120,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 app.post("/urls/:id", (req, res) => {
   const url = urlDatabase[req.params.id];
-
+  
   if(url.userID === req.cookies["user_id"]){
     urlDatabase[req.params.id].longURL = req.body.newURL;
     res.redirect(`/urls/${req.params.id}`);
@@ -170,11 +142,11 @@ app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const user = checkEmail(email);
-
+  console.log(email);
   if (!user) {
-    res.status(403).send('The server understood the request, but will not fulfill it.');
-  } else if (user.password !== password){
-    res.status(403).send('The password is wrong.');
+    res.status(403).send('The E-mail or password is missing.');
+  } else if (!bcrypt.compareSync(password, user.password)){
+    res.status(403).send('The password is incorrect.');
   } else {
     res.cookie('user_id', user.id);
     res.redirect('/urls');
@@ -187,19 +159,18 @@ app.post('/logout', (req, res) => {
 });
 
 app.post('/register', (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
-
+  let { email, password } = req.body;
+  password = bcrypt.hashSync(password);
+  
   if (!email || !password) {
     res.status(400).send('Email and/or password is missing.');
     return;
   }
-
+  
   if (checkEmail(email)) {
     res.status(400).send('This email has already been registered.');
     return;
   }
-
   const userId = generateRandomString(6);
   const newUser = {
     id: userId,
@@ -207,7 +178,6 @@ app.post('/register', (req, res) => {
     password,
   };
   users[userId] = newUser
-  
   res.cookie('user_id', userId);
   res.redirect("/urls");
 });
@@ -220,3 +190,32 @@ app.get("/register", (req,res) => {
     res.render("urls_register", templateVars);
   }
 });
+
+function generateRandomString(num) {
+  let randomStr = '';
+  let letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < num; i++ ) {
+    randomStr += letters.charAt(Math.floor(Math.random() * 
+    letters.length));
+  }
+  return randomStr;
+};
+
+const checkEmail = (email) => {
+  for (let user in users) {
+    if (users[user].email === email) {
+      return users[user];
+    } 
+  }
+  return false;
+};
+
+const urlsForUser = (id) => {
+  let user = {};
+  for (let url in urlDatabase) {
+    if (urlDatabase[url].userID === id) {
+      user[url] = urlDatabase[url];
+    }
+  }
+  return user;
+};
