@@ -50,8 +50,12 @@ app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
-app.get("/", (req, res) => {
-  res.send("Hello!");
+app.get('/', (req, res) => {
+  if (users[req.session["user_id"]]) {
+    res.redirect('/urls');
+  } else {
+    res.redirect('/login');
+  }
 });
 
 app.get("/urls.json", (req, res) => {
@@ -155,7 +159,7 @@ app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const user = getUserByEmail(email, users);
-  if (!user) {
+  if (!user || !password) {
     res.status(403).send('The E-mail or password is missing.');
   } else if (!bcrypt.compareSync(password, user.password)) {
     res.status(403).send('The password is incorrect.');
@@ -166,32 +170,8 @@ app.post("/login", (req, res) => {
 });
 
 app.post('/logout', (req, res) => {
-  req.session['user_id'] = '';
+  req.session = null;
   res.redirect('/urls/');
-});
-
-app.post('/register', (req, res) => {
-  let { email, password } = req.body;
-  password = bcrypt.hashSync(password);
-  
-  if (!email || !password) {
-    res.status(400).send('Email and/or password is missing.');
-    return;
-  }
-  
-  if (getUserByEmail(email , users)) {
-    res.status(400).send('This email has already been registered.');
-    return;
-  }
-  const userId = generateRandomString(6);
-  const newUser = {
-    id: userId,
-    email,
-    password,
-  };
-  users[userId] = newUser;
-  req.session['user_id'] = userId;
-  res.redirect("/urls");
 });
 
 app.get("/register", (req,res) => {
@@ -201,5 +181,28 @@ app.get("/register", (req,res) => {
   } else {
     res.render("urls_register", templateVars);
   }
+});
+
+app.post('/register', (req, res) => {
+  let email = req.body.email;
+  let password = req.body.password;
+  
+  if (!email || !password) {
+    return res.status(400).send('Email/password empty');
+  }
+  
+  if (getUserByEmail(email , users)) {
+    return res.status(400).send('This email has already been registered.');
+  }
+  const userId = generateRandomString(6);
+  password = bcrypt.hashSync(password);
+  const newUser = {
+    id: userId,
+    email,
+    password,
+  };
+  users[userId] = newUser;
+  req.session['user_id'] = userId;
+  res.redirect("/urls");
 });
 
